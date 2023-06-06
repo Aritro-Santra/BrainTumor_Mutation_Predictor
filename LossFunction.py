@@ -33,14 +33,17 @@ class MultiLabelWCELoss(nn.Module):
             y_true: true value
             y_pred: predicted value
         """
-        loss = 0.0
 
-        for i, key in enumerate(self.labels):
-            first_term = self.class_weights['positive_weights'][key] * torch.select(y_true, 1, i)\
-                         * torch.log(torch.select(y_pred, 1, i) + self.epsilon)
-            second_term = self.class_weights['negative_weights'][key] * (1 - torch.select(y_true, 1, i)
-                                                                         * torch.log(1 - torch.select(y_pred, 1, i))
-                                                                         + self.epsilon)
-            loss -= torch.sum(first_term + second_term)
+        first_term = torch.dot(self.positive_weights, y_true) * torch.log(y_pred) + self.epsilon
+        second_term = torch.dot(self.negative_weights, (1 - y_true)) * torch.log(1 - y_pred) + self.epsilon
+        loss = torch.sum(first_term + second_term)
+
+        # for i, key in enumerate(self.labels):
+        #     first_term = self.class_weights['positive_weights'][key] * torch.select(y_true, 1, i)\
+        #                  * torch.log(torch.select(y_pred, 1, i) + self.epsilon)
+        #     second_term = self.class_weights['negative_weights'][key] * (1 - torch.select(y_true, 1, i)
+        #                                                                  * torch.log(1 - torch.select(y_pred, 1, i))
+        #                                                                  + self.epsilon)
+        #     loss -= torch.sum(first_term + second_term)
 
         return torch.mean(loss)
