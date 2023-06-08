@@ -47,3 +47,4 @@ class MultiLabelWCELoss(nn.Module):
         #     loss -= torch.sum(first_term + second_term)
 
         return torch.mean(loss)
+

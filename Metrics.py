@@ -26,19 +26,19 @@ def hamming_loss(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         1  1    0
     """
     hl_num = torch.sum(torch.logical_xor(y_true, y_pred))
-    hl_den = torch.prod(y_true.shape)
+    shape = y_true.shape
+    hl_den = torch.prod(torch.tensor(shape))
 
     return hl_num / hl_den
 
 
 def example_based_accuracy(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
-
     # compute true positives using the logical AND operator
     numerator = torch.sum(torch.logical_and(y_true, y_pred), dim=1)
 
     # compute true_positive + false negatives + false positive using the logical OR operator
     denominator = torch.sum(torch.logical_or(y_true, y_pred), dim=1)
-    instance_accuracy = numerator/denominator
+    instance_accuracy = numerator / denominator
 
     avg_accuracy = torch.mean(instance_accuracy)
     return avg_accuracy
@@ -56,13 +56,12 @@ def example_based_precision(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch
     precision_den = torch.sum(y_pred, dim=1)
 
     # precision averaged over all training examples
-    avg_precision = torch.mean(precision_num/precision_den)
+    avg_precision = torch.mean(precision_num / precision_den)
 
     return avg_precision
 
 
 def label_based_macro_accuracy(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
-
     # axis = 0 computes true positives along columns i.e labels
     l_acc_num = torch.sum(torch.logical_and(y_true, y_pred), dim=0)
 
@@ -70,7 +69,7 @@ def label_based_macro_accuracy(y_true: torch.Tensor, y_pred: torch.Tensor) -> to
     l_acc_den = torch.sum(torch.logical_or(y_true, y_pred), dim=0)
 
     # compute mean accuracy across labels.
-    return torch.mean(l_acc_num/l_acc_den)
+    return torch.mean(l_acc_num / l_acc_den)
 
 
 def label_based_macro_precision(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
@@ -83,7 +82,7 @@ def label_based_macro_precision(y_true: torch.Tensor, y_pred: torch.Tensor) -> t
     # compute precision per class/label
     l_prec_per_class = l_prec_num / l_prec_den
 
-    # macro precision = average of precsion across labels.
+    # macro precision = average of precision across labels.
     l_prec = torch.mean(l_prec_per_class)
     return l_prec
 
@@ -154,6 +153,42 @@ def f1_score(y_true, y_pred):
 
 if __name__ == "__main__":
     # Example
-    gt = torch.Tensor([[1, 0, 1], [1, 1, 0], [1, 0, 0], [1, 1, 1], [0, 1, 0]])
-    pred = torch.Tensor([[1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1], [0, 1, 1]])
+    gt = torch.tensor([[1, 0, 1, 1, 0],
+                       [1, 1, 0, 1, 0],
+                       [1, 0, 0, 1, 0],
+                       [1, 1, 1, 0, 1],
+                       [0, 1, 0, 1, 1]],
+                      dtype=torch.float, requires_grad=True)
+    pred = torch.tensor([[1, 0, 1, 0, 1],
+                         [1, 0, 0, 0, 1],
+                         [1, 1, 0, 1, 0],
+                         [1, 1, 1, 0, 1],
+                         [0, 1, 1, 0, 1]],
+                        dtype=torch.float, requires_grad=True)
+    print("Testing different metrics")
+    print("Input tensor 1")
+    print(gt)
+    print("Input tensor 2")
+    print(pred)
     print("EMR: ", emr(gt, pred).item())
+    print("1/0 Loss: ", one_zero_loss(gt, pred))
+    hl_value = hamming_loss(gt, pred)
+    print(f"Hamming Loss: {hl_value}")
+    ex_based_accuracy = example_based_accuracy(gt, pred)
+    print(f"Example Based Accuracy: {ex_based_accuracy}")
+    ex_based_precision = example_based_precision(gt, pred)
+    print(f"Example Based Precision: {ex_based_precision}")
+    lb_macro_acc_val = label_based_macro_accuracy(gt, pred)
+    print(f"Label Based Macro Accuracy: {lb_macro_acc_val}")
+    lb_macro_precision_val = label_based_macro_precision(gt, pred)
+    print(f"Label Based Precision: {lb_macro_precision_val}")
+    lb_macro_recall_val = label_based_macro_recall(gt, pred)
+    print(f"Label Based Recall: {lb_macro_recall_val}")
+    lb_micro_acc_val = label_based_micro_accuracy(gt, pred)
+    print(f"Label Based Micro Accuracy: {lb_micro_acc_val}")
+    lb_micro_prec_val = label_based_micro_precision(gt, pred)
+    print(f"Label Based Micro Precision: {lb_micro_prec_val}")
+    lb_micro_recall_val = label_based_micro_recall(gt, pred)
+    print(f"Label Based Micro Recall: {lb_micro_recall_val}")
+    f1_score = f1_score(gt, pred)
+    print(f"F1 Score: {f1_score}")
