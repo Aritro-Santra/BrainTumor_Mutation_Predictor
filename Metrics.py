@@ -152,7 +152,7 @@ def f1_score(y_true, y_pred):
 
 
 if __name__ == "__main__":
-    # Example
+    # Example with a batch of 5 binary vectors
     gt = torch.tensor([[1, 0, 1, 1, 0],
                        [1, 1, 0, 1, 0],
                        [1, 0, 0, 1, 0],
