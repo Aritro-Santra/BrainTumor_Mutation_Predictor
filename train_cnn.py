@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import os
 import torch
 import torchvision.models as models
@@ -123,8 +122,8 @@ def train(model, dataloader, optimizer, criterions, device):
         label_based_micro_recall_list.append(label_based_micro_recall_score)
         f1_score_list.append(f1_score_val)
 
-        # confustion_matrix = multilabel_confusion_matrix(y_true, y_pred)
-        # print(confustion_matrix)
+        # confusion_matrix = multilabel_confusion_matrix(y_true, y_pred)
+        # print(confusion_matrix)
         # print(classification_report(y_true, y_pred))
         targets.append(y_true.numpy())
         predictions.append(y_pred.numpy())
