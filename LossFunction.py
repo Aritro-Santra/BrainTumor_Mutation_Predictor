@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+from torchmetrics.functional.pairwise import pairwise_cosine_similarity
 
 class MultiLabelWCELoss(nn.Module):
     def __init__(self, dataframe, device, epsilon=1e-7, test=False):
@@ -160,6 +160,14 @@ class EigenLoss(nn.Module):
         return torch.mean(similarity)
 
 
+class CosineLoss(nn.Module):
+    def __init__(self):
+        super(CosineLoss, self).__init__()
+
+    def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+        similarity = pairwise_cosine_similarity(y_true, y_pred)
+
+
 if __name__ == "__main__":
     DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -188,6 +196,10 @@ if __name__ == "__main__":
     wce_loss = wce_loss_function(gt, pred)
     eigen_loss = eig_loss_function(gt, pred)
 
+    mul_margin_loss_function = nn.MultiLabelMarginLoss()
+    mul_margin_loss = mul_margin_loss_function(gt, pred.long())
+
     print("Multi label weighted cross entropy loss: ", wce_loss)
     print("Eigen Loss: ", eigen_loss)
+    print("Multi label margin Loss: ", mul_margin_loss)
     print("Final Loss:", wce_loss + eigen_loss)

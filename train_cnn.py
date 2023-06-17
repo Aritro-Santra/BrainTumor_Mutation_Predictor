@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import os
-import torch
 import torchvision.models as models
 import torch.nn as nn
 import torch.optim as optim
@@ -22,7 +21,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # learning parameters
 LR = 1e-3
-EPOCHS = 30
+EPOCHS = 50
 BATCH_SIZE = 32
 
 
@@ -88,10 +87,20 @@ def train(model, dataloader, optimizer, criterions, device):
         # print(binarize_outputs.requires_grad)
         wce_loss = criterions[0](target, binarized_outputs)
         eigen_loss = criterions[1](target, binarized_outputs)
-        total_loss = torch.add(wce_loss, eigen_loss)
-        train_running_loss += total_loss.item()
+        ce_loss = criterions[2](target, binarized_outputs)
+        mul_margin_loss = criterions[3](target, binarized_outputs.long())
+        # total_loss = torch.add(wce_loss, eigen_loss)
+        # total_loss = torch.add(wce_loss, ce_loss)
+        # train_running_loss += total_loss.item()
+        # train_running_loss += wce_loss.item()
+        train_running_loss += ce_loss.item()
+        # train_running_loss += mul_margin_loss.item()
         # backpropagation
-        total_loss.backward()
+
+        # total_loss.backward()
+        # wce_loss.backward()
+        ce_loss.backward()
+        # mul_margin_loss.backward()
         # update optimizer parameters
         optimizer.step()
         y_true = target.detach().cpu()
@@ -247,19 +256,21 @@ if __name__ == "__main__":
     # initialize the model
     model = build_model(pretrained=False, fine_tune=True, num_classes=5).to(DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=LR)
-    wce_loss_function = MultiLabelWCELoss(dataframes['global'], device=DEVICE)
+    wce_loss_function = MultiLabelWCELoss(dataframes['local'], device=DEVICE)
     eigen_loss_function = EigenLoss(threshold=0.95)
+    ce_loss_function = nn.CrossEntropyLoss()
+    mul_margin_loss_function = nn.MultiLabelMarginLoss()
 
-    train_image_paths, test_image_paths, train_labels, test_labels = train_test_split(image_paths['global'],
-                                                                                      labels['global'], test_size=0.2)
+    train_image_paths, test_image_paths, train_labels, test_labels = train_test_split(image_paths['local'],
+                                                                                      labels['local'], test_size=0.2)
     # train dataset
     train_data = WSIDataset(train_image_paths, train_labels, train=True)
     # validation dataset
     valid_data = WSIDataset(test_image_paths, test_labels, train=False)
     # train data loader
-    train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
+    train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, num_workers=12)
     # validation data loader
-    valid_loader = DataLoader(valid_data, batch_size=BATCH_SIZE, shuffle=False)
+    valid_loader = DataLoader(valid_data, batch_size=BATCH_SIZE, shuffle=False, num_workers=12)
 
     train_loss = []
     valid_loss = []
@@ -290,12 +301,12 @@ if __name__ == "__main__":
     val_metrics['lbl_micro_precision'] = list()
     val_metrics['lbl_micro_recall'] = list()
     val_metrics['f1_score'] = list()
-
     for epoch in range(EPOCHS):
         print(f"Epoch {epoch + 1} of {EPOCHS}")
         print("Training...")
         train_epoch_loss, targets, predictions, train_metrics_values = train(
-            model, train_loader, optimizer, [wce_loss_function, eigen_loss_function], DEVICE
+            model, train_loader, optimizer,
+            [wce_loss_function, eigen_loss_function, ce_loss_function, mul_margin_loss_function], DEVICE
         )
         print("Classification Report")
         print(classification_report(targets, predictions))
@@ -363,3 +374,9 @@ if __name__ == "__main__":
         valid_loss.append(valid_epoch_loss)
         print(f"Train Loss: {train_epoch_loss:.4f}")
         print(f'Val Loss: {valid_epoch_loss:.4f}')
+    train_df = pd.DataFrame(train_metrics)
+    train_df['Train_loss'] = train_loss
+    val_df = pd.DataFrame(val_metrics)
+    val_df['Val_loss'] = valid_loss
+    train_df.to_csv(os.path.join("Results", "train_results.csv"))
+    val_df.to_csv(os.path.join("Results", "val_results.csv"))
