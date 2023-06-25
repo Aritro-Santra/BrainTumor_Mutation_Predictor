@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 from torchmetrics.functional.pairwise import pairwise_cosine_similarity
+from torchmetrics.classification import MultilabelHammingDistance, MultilabelRankingLoss
+
 
 class MultiLabelWCELoss(nn.Module):
     def __init__(self, dataframe, device, epsilon=1e-7, test=False):
@@ -108,7 +110,14 @@ class EigenLoss(nn.Module):
                 super_mat = mat
             else:
                 super_mat = torch.row_stack((super_mat, mat))
-        return torch.reshape(super_mat, (batch_size, 5, 5,))
+        super_mat = torch.reshape(super_mat, (batch_size, 5, 5,))
+        super_mat = super_mat * 2   # All 1's becomes 2 while 0 remains 0
+        super_mat = super_mat - 1   # All 0's become -1 while 2's become 1
+        diag = torch.diagonal(super_mat, dim1=1, dim2=2)
+        super_mat_diagonal = torch.diag_embed(diag, dim1=1, dim2=2)  # Will get a 5 x 5 diagonal matrix with elements
+        # same as the diagonals of super_mat
+        super_mat = super_mat - super_mat_diagonal
+        return super_mat
 
     def calculate_laplacian(self, adjacency_matrix: torch.Tensor) -> torch.Tensor:
         # Calculate the degree matrix
@@ -165,7 +174,20 @@ class CosineLoss(nn.Module):
         super(CosineLoss, self).__init__()
 
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
-        similarity = pairwise_cosine_similarity(y_true, y_pred)
+        similarity = pairwise_cosine_similarity(y_true, y_pred, reduction='mean')
+        return torch.mean(1 - similarity)
+
+
+class HammingLoss(nn.Module):
+    def __int__(self, device: torch.device):
+        super(HammingLoss, self).__int__()
+        self.device = device
+
+    def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+        distance_func = MultilabelHammingDistance(num_labels=5)
+        # distance_func = distance_func.to(device=self.device)
+        distance = distance_func(y_pred, y_true)
+        return torch.mean(1 - distance)
 
 
 if __name__ == "__main__":
@@ -192,14 +214,22 @@ if __name__ == "__main__":
                         dtype=torch.float, requires_grad=True).to(DEVICE)
     wce_loss_function = MultiLabelWCELoss(dataframe=None, device=DEVICE, test=True)
     eig_loss_function = EigenLoss(test=True)
+    mul_margin_loss_function = nn.MultiLabelMarginLoss()
+    cosine_loss_function = CosineLoss()
+    hamming_loss_function = MultilabelHammingDistance(num_labels=5).to(device=DEVICE)
+    ranking_loss_function = MultilabelRankingLoss(num_labels=5).to(device=DEVICE)
 
     wce_loss = wce_loss_function(gt, pred)
     eigen_loss = eig_loss_function(gt, pred)
-
-    mul_margin_loss_function = nn.MultiLabelMarginLoss()
     mul_margin_loss = mul_margin_loss_function(gt, pred.long())
+    cosine_loss = cosine_loss_function(gt, pred)
+    hamming_loss = 1 - hamming_loss_function(pred, gt)
+    ranking_loss = ranking_loss_function(pred, gt)
 
     print("Multi label weighted cross entropy loss: ", wce_loss)
     print("Eigen Loss: ", eigen_loss)
     print("Multi label margin Loss: ", mul_margin_loss)
+    print("Cosine Loss (1 - cosine similarity): ", cosine_loss)
+    print("Hamming Loss (1 - Hamming Distance):", hamming_loss)
+    print("Ranking Loss: ", ranking_loss)
     print("Final Loss:", wce_loss + eigen_loss)

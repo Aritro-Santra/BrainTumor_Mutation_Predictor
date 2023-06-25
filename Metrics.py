@@ -1,11 +1,17 @@
 import torch
+from torchmetrics.classification import MultilabelStatScores, MultilabelAccuracy, MultilabelPrecision, MultilabelRecall
+from torchmetrics.classification import MultilabelExactMatch, MultilabelF1Score, MultilabelConfusionMatrix, MultilabelHammingDistance
 
 
 def emr(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
-    n = len(y_true)
-    row_indicators = torch.all(y_true == y_pred, dim=1)  # dim = 1 will check for equality along rows
-    exact_match_count = torch.sum(row_indicators)
-    return exact_match_count / n
+    exact_matcher = MultilabelExactMatch(num_labels=5)
+    exact_match_ratio = exact_matcher(y_pred, y_true)
+
+    # n = len(y_true)
+    # row_indicators = torch.all(y_true == y_pred, dim=1)  # dim = 1 will check for equality along rows
+    # exact_match_count = torch.sum(row_indicators)
+    # return exact_match_count / n
+    return exact_match_ratio
 
 
 def one_zero_loss(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
@@ -16,7 +22,7 @@ def one_zero_loss(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
     return not_equal_count / n
 
 
-def hamming_loss(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+def hamming_distance(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
     """
         XOR TT for reference -
         A  B   Output
@@ -25,11 +31,13 @@ def hamming_loss(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         1  0    1
         1  1    0
     """
-    hl_num = torch.sum(torch.logical_xor(y_true, y_pred))
-    shape = y_true.shape
-    hl_den = torch.prod(torch.tensor(shape))
+    function = MultilabelHammingDistance(num_labels=5)
+    return function(y_true, y_pred).item()
 
-    return hl_num / hl_den
+
+def multi_label_accuracy(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+    function = MultilabelAccuracy(num_labels=5)
+    return function(y_pred, y_true)
 
 
 def example_based_accuracy(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
@@ -87,7 +95,7 @@ def label_based_macro_precision(y_true: torch.Tensor, y_pred: torch.Tensor) -> t
     return l_prec
 
 
-def label_based_macro_recall(y_true, y_pred):
+def label_based_macro_recall(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
     # compute true positive along axis = 0 i.e labels
     l_recall_num = torch.sum(torch.logical_and(y_true, y_pred), dim=0)
 
@@ -102,7 +110,7 @@ def label_based_macro_recall(y_true, y_pred):
     return l_recall
 
 
-def label_based_micro_accuracy(y_true, y_pred):
+def label_based_micro_accuracy(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
     # sum of all true positives across all examples and labels
     l_acc_num = torch.sum(torch.logical_and(y_true, y_pred))
 
@@ -113,7 +121,7 @@ def label_based_micro_accuracy(y_true, y_pred):
     return l_acc_num / l_acc_den
 
 
-def label_based_micro_precision(y_true, y_pred):
+def label_based_micro_precision(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
     # compute sum of true positives (tp) across training examples
     # and labels.
     l_prec_num = torch.sum(torch.logical_and(y_true, y_pred))
@@ -125,7 +133,7 @@ def label_based_micro_precision(y_true, y_pred):
     return l_prec_num / l_prec_den
 
 
-def label_based_micro_recall(y_true, y_pred):
+def label_based_micro_recall(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
     # compute sum of true positives across training examples and labels.
     l_recall_num = torch.sum(torch.logical_and(y_true, y_pred))
     # compute sum of tp + fn across training examples and labels
@@ -135,20 +143,42 @@ def label_based_micro_recall(y_true, y_pred):
     return l_recall_num / l_recall_den
 
 
+def multi_label_precision(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+    function = MultilabelPrecision(num_labels=5)
+    return function(y_pred, y_true)
+
+
+def multi_label_recall(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+    function = MultilabelRecall(num_labels=5)
+    return function(y_pred, y_true)
+
+
+def multi_label_stat_scores(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+    function = MultilabelStatScores(num_labels=5)
+    return function(y_pred, y_true)
+
+
+def multi_label_confusion_matrix(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+    function = MultilabelConfusionMatrix(num_labels=5)
+    return function(y_pred, y_true)
+
+
 def f1_score(y_true, y_pred):
     """
     Calculate F1 score
     y_true: true value
     y_pred: predicted value
     """
-    epsilon = 1e-7
-
-    true_positives = torch.sum(torch.round(torch.clip(y_true * y_pred, 0, 1)))
-    possible_positives = torch.sum(torch.round(torch.clip(y_true, 0, 1)))
-    recall = true_positives / (possible_positives + epsilon)
-    predicted_positives = torch.sum(torch.round(torch.clip(y_pred, 0, 1)))
-    precision = true_positives / (predicted_positives + epsilon)
-    return (2 * precision * recall) / (precision + recall + epsilon)
+    # epsilon = 1e-7
+    #
+    # true_positives = torch.sum(torch.round(torch.clip(y_true * y_pred, 0, 1)))
+    # possible_positives = torch.sum(torch.round(torch.clip(y_true, 0, 1)))
+    # recall = true_positives / (possible_positives + epsilon)
+    # predicted_positives = torch.sum(torch.round(torch.clip(y_pred, 0, 1)))
+    # precision = true_positives / (predicted_positives + epsilon)
+    # return (2 * precision * recall) / (precision + recall + epsilon)
+    function = MultilabelF1Score(num_labels=5)
+    return function(y_pred, y_true)
 
 
 if __name__ == "__main__":
@@ -174,6 +204,16 @@ if __name__ == "__main__":
     print("1/0 Loss: ", one_zero_loss(gt, pred))
     hl_value = hamming_loss(gt, pred)
     print(f"Hamming Loss: {hl_value}")
+    accuracy = multi_label_accuracy(gt, pred)
+    print(f"Multi label Accuracy: {accuracy}")
+    precision = multi_label_precision(gt, pred)
+    print(f"Multi label Precision: {precision}")
+    recall = multi_label_recall(gt, pred)
+    print(f"Multi label Recall: {recall}")
+    f1_score = f1_score(gt, pred)
+    print(f"F1 Score: {f1_score}")
+    stat_scores = multi_label_stat_scores(gt, pred)
+    print(f"Stat Scores:", stat_scores)
     ex_based_accuracy = example_based_accuracy(gt, pred)
     print(f"Example Based Accuracy: {ex_based_accuracy}")
     ex_based_precision = example_based_precision(gt, pred)
@@ -190,5 +230,6 @@ if __name__ == "__main__":
     print(f"Label Based Micro Precision: {lb_micro_prec_val}")
     lb_micro_recall_val = label_based_micro_recall(gt, pred)
     print(f"Label Based Micro Recall: {lb_micro_recall_val}")
-    f1_score = f1_score(gt, pred)
-    print(f"F1 Score: {f1_score}")
+    # confusion_matrix = multi_label_confusion_matrix(gt, pred)
+    # print("Confusion Matrix")
+    # print(confusion_matrix)
