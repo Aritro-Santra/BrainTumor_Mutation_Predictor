@@ -88,21 +88,22 @@ def train(model, dataloader, optimizer, criterions, metrics_dict, device):
         # print("Prediction: ", binarized_outputs)
         # print(binarized_outputs.grad_fn)
         # print(binarize_outputs.requires_grad)
-        wce_loss = criterions[0](target, binarized_outputs)
+        # wce_loss = criterions[0](target, binarized_outputs)
         eigen_loss = criterions[1](target, binarized_outputs)
         ce_loss = criterions[2](target, binarized_outputs)
         mul_margin_loss = criterions[3](target, binarized_outputs.long())
-        # total_loss = torch.add(wce_loss, eigen_loss)
+        # cosine_loss = criterions[4](target, binarized_outputs)
+        total_loss = torch.add(ce_loss, eigen_loss)
         # total_loss = torch.add(wce_loss, ce_loss)
-        # train_running_loss += total_loss.item()
+        train_running_loss += total_loss.item()
         # train_running_loss += wce_loss.item()
-        train_running_loss += ce_loss.item()
+        # train_running_loss += ce_loss.item()
         # train_running_loss += mul_margin_loss.item()
         # backpropagation
 
-        # total_loss.backward()
+        total_loss.backward()
         # wce_loss.backward()
-        ce_loss.backward()
+        # ce_loss.backward()
         # mul_margin_loss.backward()
         # update optimizer parameters
         optimizer.step()
@@ -269,7 +270,7 @@ def print_metric_results(metrics: dict, op_file=None):
     print("F1 Score:", metrics['f1_score'])
 
     if op_file is not None:
-        op_file.write(f"{metrics['emr']},{metrics['one_zero']},{metrics['hamming']},{metrics['accuracy']},{metrics['precision']},{metrics['recall']},{metrics['f1_score']}")
+        op_file.write(f"\n{metrics['emr']},{metrics['one_zero']},{metrics['hamming']},{metrics['accuracy']},{metrics['precision']},{metrics['recall']},{metrics['f1_score']}")
 
 
 if __name__ == "__main__":

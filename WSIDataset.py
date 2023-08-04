@@ -14,7 +14,7 @@ class WSIDataset(Dataset):
             self.transform = transforms.Compose([
                 transforms.ToPILImage(),
                 transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomRotation(degrees=45),
+                # transforms.RandomRotation(degrees=45),
                 transforms.ToTensor(),
             ])
         # set the validation data images and labels

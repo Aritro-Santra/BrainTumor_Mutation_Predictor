@@ -159,5 +159,10 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
+Results/
+misc.ipynb
+misc.csv
+
+
 # Ignore the dataset folder and all its contents
 data/
