@@ -36,7 +36,7 @@ def hamming_distance(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor
 
 
 def multi_label_accuracy(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
-    function = MultilabelAccuracy(num_labels=5)
+    function = MultilabelAccuracy(num_labels=2)
     return function(y_pred, y_true)
 
 
@@ -73,7 +73,7 @@ def label_based_macro_accuracy(y_true: torch.Tensor, y_pred: torch.Tensor) -> to
     # axis = 0 computes true positives along columns i.e labels
     l_acc_num = torch.sum(torch.logical_and(y_true, y_pred), dim=0)
 
-    # axis = 0 computes true postive + false positive + false negatives along columns i.e labels
+    # axis = 0 computes true positive + false positive + false negatives along columns i.e labels
     l_acc_den = torch.sum(torch.logical_or(y_true, y_pred), dim=0)
 
     # compute mean accuracy across labels.
@@ -144,12 +144,12 @@ def label_based_micro_recall(y_true: torch.Tensor, y_pred: torch.Tensor) -> torc
 
 
 def multi_label_precision(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
-    function = MultilabelPrecision(num_labels=5)
+    function = MultilabelPrecision(num_labels=2)
     return function(y_pred, y_true)
 
 
 def multi_label_recall(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
-    function = MultilabelRecall(num_labels=5)
+    function = MultilabelRecall(num_labels=2)
     return function(y_pred, y_true)
 
 
@@ -177,7 +177,7 @@ def f1_score(y_true, y_pred):
     # predicted_positives = torch.sum(torch.round(torch.clip(y_pred, 0, 1)))
     # precision = true_positives / (predicted_positives + epsilon)
     # return (2 * precision * recall) / (precision + recall + epsilon)
-    function = MultilabelF1Score(num_labels=5)
+    function = MultilabelF1Score(num_labels=2)
     return function(y_pred, y_true)
 
 
@@ -202,8 +202,8 @@ if __name__ == "__main__":
     print(pred)
     print("EMR: ", emr(gt, pred).item())
     print("1/0 Loss: ", one_zero_loss(gt, pred))
-    hl_value = hamming_loss(gt, pred)
-    print(f"Hamming Loss: {hl_value}")
+    hl_value = hamming_distance(gt, pred)
+    print(f"Hamming Loss: {1 - hl_value}")
     accuracy = multi_label_accuracy(gt, pred)
     print(f"Multi label Accuracy: {accuracy}")
     precision = multi_label_precision(gt, pred)

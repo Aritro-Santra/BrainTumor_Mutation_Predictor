@@ -166,3 +166,4 @@ misc.csv
 
 # Ignore the dataset folder and all its contents
 data/
+*.svs
